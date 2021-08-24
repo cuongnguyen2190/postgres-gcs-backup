@@ -1,0 +1,22 @@
+version: "3.7"
+
+services:
+    postgres-gcs-backup:
+        build: 
+            context: .
+            dockerfile: Dockerfile
+        image: hungcuongvt90/postgres_backup:latest
+        container_name: postgres-gcs-backup
+        environment: 
+            - GCS_BUCKET=
+            - GCS_KEY_FILE_PATH=
+            - POSTGRES_HOST=
+            - POSTGRES_PORT=
+            - POSTGRES_DB=
+            - POSTGRES_USER=
+            - POSTGRES_PASSWORD=
+            - SLACK_ALERTS=false
+            - SLACK_WEBHOOK_URL=
+            - SLACK_CHANNEL=
+            - SLACK_USERNAME=
+        restart: always

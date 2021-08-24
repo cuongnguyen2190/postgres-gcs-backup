@@ -18,9 +18,6 @@ POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-}
 SLACK_ALERTS=${SLACK_ALERTS:-}
 SLACK_AUTHOR_NAME=${SLACK_AUTHOR_NAME:-postgres-gcs-backup}
 SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL:-}
-SLACK_CHANNEL=${SLACK_CHANNEL:-}
-SLACK_USERNAME=${SLACK_USERNAME:-}
-SLACK_ICON=${SLACK_ICON:-}
 
 backup() {
   mkdir -p $BACKUP_DIR
@@ -39,7 +36,7 @@ backup() {
   fi
 
   export PGPASSWORD=$POSTGRES_PASSWORD
-  cmd="pg_dump --host=\"$POSTGRES_HOST\" --port=\"$POSTGRES_PORT\" $cmd_auth_part $cmd_db_part | gzip > $BACKUP_DIR/$archive_name"
+  cmd="pg_dumpall --host=\"$POSTGRES_HOST\" --port=\"$POSTGRES_PORT\" $cmd_auth_part $cmd_db_part | gzip > $BACKUP_DIR/$archive_name"
   echo "starting to backup PostGRES host=$POSTGRES_HOST port=$POSTGRES_PORT"
 
   eval "$cmd"
@@ -68,22 +65,10 @@ EOF
   gsutil cp $BACKUP_DIR/$archive_name $GCS_BUCKET
 }
 
-send_slack_message() {
-  local color=${1}
-  local title=${2}
-  local message=${3}
+send_discord_message() {
+  local message=${1}
 
-  echo 'Sending to '${SLACK_CHANNEL}'...'
-  curl --data-urlencode \
-    "$(printf 'payload={"channel": "%s", "username": "%s", "link_names": "true", "icon_url": "%s", "attachments": [{"author_name": "%s", "title": "%s", "text": "%s", "color": "%s"}]}' \
-        "${SLACK_CHANNEL}" \
-        "${SLACK_USERNAME}" \
-        "${SLACK_ICON}" \
-        "${SLACK_AUTHOR_NAME}" \
-        "${title}" \
-        "${message}" \
-        "${color}" \
-    )" \
+  curl -i -H "Accept: application/json" -H "Content-Type:application/json" -X POST --data "{\"content\": \"${message}\"}" \
     ${SLACK_WEBHOOK_URL} || true
   echo
 }
@@ -93,7 +78,7 @@ err() {
   echo $err_msg >&2
   if [[ $SLACK_ALERTS == "true" ]]
   then
-    send_slack_message "danger" "Error while performing postgres backup" "$err_msg"
+    send_discord_message "Error while performing postgres backup: $err_msg"
   fi
 }
 
@@ -101,8 +86,9 @@ cleanup() {
   rm $BACKUP_DIR/$archive_name
 }
 
+date=$(date "+%Y-%m-%dT%H:%M:%SZ")
 trap err ERR
 backup
 upload_to_gcs
 cleanup
-echo "backup done!"
+send_discord_message "Backup is done: ${date}"
