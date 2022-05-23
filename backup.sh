@@ -36,7 +36,7 @@ backup() {
   fi
 
   export PGPASSWORD=$POSTGRES_PASSWORD
-  cmd="pg_dumpall --host=\"$POSTGRES_HOST\" --port=\"$POSTGRES_PORT\" $cmd_auth_part $cmd_db_part | gzip > $BACKUP_DIR/$archive_name"
+  cmd="pg_dump --host=\"$POSTGRES_HOST\" --port=\"$POSTGRES_PORT\" $cmd_auth_part $cmd_db_part | gzip > $BACKUP_DIR/$archive_name"
   echo "starting to backup PostGRES host=$POSTGRES_HOST port=$POSTGRES_PORT"
 
   eval "$cmd"
@@ -68,7 +68,7 @@ EOF
 send_discord_message() {
   local message=${1}
 
-  curl -i -H "Accept: application/json" -H "Content-Type:application/json" -X POST --data "{\"content\": \"${message}\"}" \
+  curl -i -H "Accept: application/json" -H "Content-Type:application/json" -X POST --data "{\"text\": \"${message}\"}" \
     ${SLACK_WEBHOOK_URL} || true
   echo
 }
